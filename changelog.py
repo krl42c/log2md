@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 
 import subprocess
-import re
 import os
 import argparse
 
-conf = None
+CONF = None
 CHANGELOG = "changelog"
 
 if os.path.exists("settings.yaml"):
     import yaml
     from pathlib import Path
-    conf = yaml.safe_load(Path("settings.yaml").read_text())
+    CONF = yaml.safe_load(Path("settings.yaml").read_text())
 elif os.path.exists("settings.json"):
     import json
-    conf = json.loads(open("settings.json").read())
+    CONF = json.loads(open("settings.json", "r", encoding="utf-8").read())
 
 def get_branch():
     branch = subprocess.check_output(["git", "branch"], stderr=subprocess.STDOUT)
     return branch.decode().removeprefix("*")
 
-def get_commits(reg, dir):
+def get_commits(reg, path):
     output_lines = []
-    checkout = subprocess.call(["git", "checkout", conf["branch"]], cwd=dir)
+    subprocess.call(["git", "checkout", CONF["branch"]], cwd=path)
     lines = subprocess.check_output(
-        ['git', 'log', '--since', conf["from_date"]], stderr=subprocess.STDOUT
+        ['git', 'log', '--since', CONF["from_date"]], stderr=subprocess.STDOUT, cwd=path
     )
     lines = str(lines).split("\\n")
     for line in lines:
@@ -34,16 +33,16 @@ def get_commits(reg, dir):
 
 def get_non_prefixed_commits(reg):
     output_lines = []
-    checkout = subprocess.call(["git", "checkout", conf["branch"]])
+    subprocess.call(["git", "checkout", CONF["branch"]])
     lines = subprocess.check_output(
-        ['git', 'log', '--since', conf["from_date"]], stderr=subprocess.STDOUT
+        ['git', 'log', '--since', CONF["from_date"]], stderr=subprocess.STDOUT
     )
     lines = str(lines).split("\\n")
     for line in lines:
         if not line.find(reg) != -1:
             output_lines.append(line)
     return output_lines
-    
+
 def gen_markdown(branch, logs):
     output = ""
     branch = "# " + branch + "\n"
@@ -53,7 +52,7 @@ def gen_markdown(branch, logs):
         output += md
     return output
 
-def create_changelog_file(file_name, data):
+def create_changelog_file(file_name, data): 
     with open(file_name, "w", encoding="utf-8") as file:
         file.write(data)
 
@@ -70,14 +69,14 @@ parser.add_argument('--branch', nargs='?', help='Git branch', dest="branch")
 args = parser.parse_args()
 
 if args.from_date:
-    conf["from_date"] = args.from_date
+    CONF["from_date"] = args.from_date
 if args.directory:
-    conf["scan_dir"] = args.directory
+    CONF["scan_dir"] = args.directory
 if args.commit_prefix:
-    conf["commit_prefix"] = args.commit_prefix
+    CONF["commit_prefix"] = args.commit_prefix
 if args.branch:
-    conf["branch"] = args.branch
+    CONF["branch"] = args.branch
 
-data = gen_markdown(get_branch(), get_commits(conf["commit_prefix"], conf["scan_dir"]))
-file_name = CHANGELOG + "_" + conf["branch"] + ".md"
-create_changelog_file(file_name, data)
+md_data = gen_markdown(get_branch(), get_commits(CONF["commit_prefix"], CONF["scan_dir"]))
+name = CHANGELOG + "_" + CONF["branch"] + ".md"
+create_changelog_file(name, md_data)
