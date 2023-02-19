@@ -19,28 +19,21 @@ def get_branch():
     branch = subprocess.check_output(["git", "branch"], stderr=subprocess.STDOUT)
     return branch.decode().removeprefix("*")
 
-def get_commits(reg, path):
+def get_commits(reg : str, path : str):
     output_lines = []
     subprocess.call(["git", "checkout", CONF["branch"]], cwd=path)
     lines = subprocess.check_output(
-        ['git', 'log', '--since', CONF["from_date"]], stderr=subprocess.STDOUT, cwd=path
+        ['git', 'log', '--oneline', '--since', CONF["from_date"]], stderr=subprocess.STDOUT, cwd=path
     )
     lines = str(lines).split("\\n")
-    for line in lines:
-        if line.find(reg) != -1:
-            output_lines.append(line)
-    return output_lines
+    print(f"Reg {reg}")
+    if not reg == "":
+        for line in lines:
+            if line.find(reg) != -1 and reg != "":
+                output_lines.append(line)
+    else:
+        output_lines.append(lines)
 
-def get_non_prefixed_commits(reg):
-    output_lines = []
-    subprocess.call(["git", "checkout", CONF["branch"]])
-    lines = subprocess.check_output(
-        ['git', 'log', '--since', CONF["from_date"]], stderr=subprocess.STDOUT
-    )
-    lines = str(lines).split("\\n")
-    for line in lines:
-        if not line.find(reg) != -1:
-            output_lines.append(line)
     return output_lines
 
 def gen_markdown(branch, logs):
@@ -78,5 +71,5 @@ if args.branch:
     CONF["branch"] = args.branch
 
 md_data = gen_markdown(get_branch(), get_commits(CONF["commit_prefix"], CONF["scan_dir"]))
-name = CHANGELOG + "_" + CONF["branch"] + ".md"
+name = CONF["branch"] + ".md"
 create_changelog_file(name, md_data)
