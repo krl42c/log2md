@@ -20,7 +20,7 @@ def get_branch():
     return branch.decode().removeprefix("*")
 
 def get_commits(reg : str, path : str):
-    output_lines = []
+    output_lines : str = []
     subprocess.call(["git", "checkout", CONF["branch"]], cwd=path)
     lines = subprocess.check_output(
         ['git', 'log', '--oneline', '--since', CONF["from_date"]], stderr=subprocess.STDOUT, cwd=path
@@ -30,10 +30,14 @@ def get_commits(reg : str, path : str):
     if not reg == "":
         for line in lines:
             if line.find(reg) != -1 and reg != "":
+                if CONF["hash"] is False:
+                    line = remove_hash(line)
                 output_lines.append(line)
     else:
-        output_lines.append(lines)
-
+        for line in lines:
+            if CONF["hash"] is False:
+                line = remove_hash(line)
+            output_lines.append(line)
     return output_lines
 
 def gen_markdown(branch, logs):
@@ -49,6 +53,9 @@ def create_changelog_file(file_name, data):
     with open(file_name, "w", encoding="utf-8") as file:
         file.write(data)
 
+def remove_hash(line : str):
+    return line.partition(" ")[2]
+
 parser = argparse.ArgumentParser(
                     prog = 'log2md',
                     description = 'Generate changelog MD files from Git log',
@@ -58,6 +65,7 @@ parser.add_argument('--from', nargs='?', help='Start date', dest="from_date")
 parser.add_argument('--dir', nargs='?', help='Target directory', dest="directory")
 parser.add_argument('--prefix', nargs='?', help='Commit prefix to look for', dest="commit_prefix")
 parser.add_argument('--branch', nargs='?', help='Git branch', dest="branch")
+parser.add_argument('--hash', nargs='?', help='Include commit hash', dest="hash")
 
 args = parser.parse_args()
 
@@ -69,6 +77,8 @@ if args.commit_prefix:
     CONF["commit_prefix"] = args.commit_prefix
 if args.branch:
     CONF["branch"] = args.branch
+if args.hash:
+    CONF["hash"] = args.hash
 
 md_data = gen_markdown(get_branch(), get_commits(CONF["commit_prefix"], CONF["scan_dir"]))
 name = CONF["branch"] + ".md"
