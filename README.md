@@ -2,15 +2,6 @@
 
 Create changelog markdown files from local Git logs.
 
-
-## Requirements
-
-If you want to load settings from a yaml file:
-
-```cli
-    $ pip3 install pyyaml 
-```
-
 ## Usage
 
 ```cli
